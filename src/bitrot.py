@@ -25,7 +25,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-
+# ------------------------------------------------------------------------------
 import argparse
 import atexit
 import datetime
@@ -39,13 +39,36 @@ import stat
 import sys
 import tempfile
 import time
-
-
+import logging
+# ------------------------------------------------------------------------------
 DEFAULT_CHUNK_SIZE = 16384
 DOT_THRESHOLD = 200
 VERSION = (0, 6, 0)
+LOG_FILENAME = 'application.log'
+# ------------------------------------------------------------------------------
+def get_logger(verbosity = 1):
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
 
+    # create a logging format
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
+    # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
+    # write logs to file
+    filehandler = logging.FileHandler(LOG_FILENAME)
+    filehandler.setLevel(logging.INFO)
+    filehandler.setFormatter(formatter)
+    logger.addHandler(filehandler)
+
+    if verbosity > 0:
+        # write logs also to stdout
+        stdouthandler = logging.StreamHandler(sys.stdout)
+        stdouthandler.setLevel(logging.INFO)
+        stdouthandler.setFormatter(formatter)
+        logger.addHandler(stdouthandler)
+
+    return logger
+# ------------------------------------------------------------------------------
 def sha1(path, chunk_size):
     digest = hashlib.sha1()
     with open(path) as f:
@@ -54,15 +77,13 @@ def sha1(path, chunk_size):
             digest.update(d)
             d = f.read(chunk_size)
     return digest.hexdigest()
-
-
+# ------------------------------------------------------------------------------
 def throttled_commit(conn, commit_interval, last_commit_time):
     if time.time() - last_commit_time > commit_interval:
         conn.commit()
         last_commit_time = time.time()
     return last_commit_time
-
-
+# ------------------------------------------------------------------------------
 def get_sqlite3_cursor(path, copy=False):
     if copy:
         if not os.path.exists(path):
@@ -88,32 +109,39 @@ def get_sqlite3_cursor(path, copy=False):
         cur.execute('CREATE INDEX bitrot_hash_idx ON bitrot (hash)')
     atexit.register(conn.commit)
     return conn
-
-
+# ------------------------------------------------------------------------------
 def run(verbosity=1, test=False, follow_links=False, commit_interval=300,
-        chunk_size=DEFAULT_CHUNK_SIZE):
+        chunk_size=DEFAULT_CHUNK_SIZE, list_dbase = False):
+    lgr = get_logger(verbosity)
+    lgr.info('Running tool')
     current_dir = b'.'   # sic, relative path
+
+    # get and open the database
     bitrot_db = os.path.join(current_dir, b'.bitrot.db')
     try:
         conn = get_sqlite3_cursor(bitrot_db, copy=test)
     except ValueError:
-        print('No database exists so cannot test. Run the tool once first.')
+        lgr.info('No database exists so cannot test. Run the tool once first.')
         sys.exit(2)
     cur = conn.cursor()
+
+    # init variables
     new_paths = []
     updated_paths = []
     renamed_paths = []
+    paths = []
     error_count = 0
     total_size = 0
     current_size = 0
     last_reported_size = ''
     missing_paths = set()
     cur.execute('SELECT path FROM bitrot')
+
+    # get the paths stored in the database
     row = cur.fetchone()
     while row:
         missing_paths.add(row[0])
         row = cur.fetchone()
-    paths = []
     for path, _, files in os.walk(current_dir):
         for f in files:
             p = os.path.join(path, f)
@@ -134,6 +162,12 @@ def run(verbosity=1, test=False, follow_links=False, commit_interval=300,
     paths.sort()
     last_commit_time = 0
     tcommit = functools.partial(throttled_commit, conn, commit_interval)
+    if list_dbase:
+        print('Files in database:')
+        for p in paths:
+            print('  ' + str(p))
+
+    # go through the files and check
     for p in paths:
         st = os.stat(p)
         new_mtime = int(st.st_mtime)
@@ -150,7 +184,7 @@ def run(verbosity=1, test=False, follow_links=False, commit_interval=300,
             new_sha1 = sha1(p, chunk_size)
         except (IOError, OSError) as e:
             if verbosity:
-                print(
+                lgr.info(
                     '\rwarning: cannot compute hash of {} [{}]'.format(
                         p, errno.errorcode[e.args[0]],
                     ),
@@ -195,13 +229,14 @@ def run(verbosity=1, test=False, follow_links=False, commit_interval=300,
             last_commit_time = tcommit(last_commit_time)
         elif stored_sha1 != new_sha1:
             error_count += 1
-            print(
+            lgr.info(
                 '\rerror: SHA1 mismatch for {}: expected {}, got {}.'
                 ' Original info from {}.'.format(
                     p, stored_sha1, new_sha1, update_ts
                 ),
                 file=sys.stderr,
             )
+    lgr.info('all files checked')
     for path in missing_paths:
         cur.execute('DELETE FROM bitrot WHERE path=?', (path,))
         last_commit_time = tcommit(last_commit_time)
@@ -209,10 +244,10 @@ def run(verbosity=1, test=False, follow_links=False, commit_interval=300,
     cur.execute('SELECT COUNT(path) FROM bitrot')
     all_count = cur.fetchone()[0]
     if verbosity:
-        print('\rFinished. {:.2f} MiB of data read. {} errors found.'
+        lgr.info('Finished. {:.2f} MiB of data read. {} errors found.'
               ''.format(total_size/1024/1024, error_count))
         if verbosity == 1:
-            print(
+            lgr.info(
                 '{} entries in the database, {} new, {} updated, '
                 '{} renamed, {} missing.'.format(
                     all_count, len(new_paths), len(updated_paths),
@@ -220,35 +255,34 @@ def run(verbosity=1, test=False, follow_links=False, commit_interval=300,
                 ),
             )
         elif verbosity > 1:
-            print('{} entries in the database.'.format(all_count), end=' ')
+            lgr.info('{} entries in the database.'.format(all_count))
             if new_paths:
-                print('{} entries new:'.format(len(new_paths)))
+                lgr.info('{} entries new:'.format(len(new_paths)))
                 new_paths.sort()
                 for path in new_paths:
-                    print(' ', path)
+                    lgr.info('  ' + path)
             if updated_paths:
-                print('{} entries updated:'.format(len(updated_paths)))
+                lgr.info('{} entries updated:'.format(len(updated_paths)))
                 updated_paths.sort()
                 for path in updated_paths:
-                    print(' ', path)
+                    lgr.info('  ' + path)
             if renamed_paths:
-                print('{} entries renamed:'.format(len(renamed_paths)))
+                lgr.info('{} entries renamed:'.format(len(renamed_paths)))
                 renamed_paths.sort()
                 for path in renamed_paths:
-                    print(' from', path[0], 'to', path[1])
+                    lgr.info('  from', path[0], 'to', path[1])
             if missing_paths:
-                print('{} entries missing:'.format(len(missing_paths)))
+                lgr.info('{} entries missing:'.format(len(missing_paths)))
                 missing_paths = sorted(missing_paths)
                 for path in missing_paths:
-                    print(' ', path)
+                    lgr.info('  ', path)
             if not any((new_paths, updated_paths, missing_paths)):
-                print()
+                lgr.info()
         if test:
-            print('warning: database file not updated on disk (test mode).')
+            lgr.info('warning: database file not updated on disk (test mode).')
     if error_count:
         sys.exit(1)
-
-
+# ------------------------------------------------------------------------------
 def stable_sum():
     current_dir = b'.'   # sic, relative path
     bitrot_db = os.path.join(current_dir, b'.bitrot.db')
@@ -261,12 +295,11 @@ def stable_sum():
         digest.update(row[0])
         row = cur.fetchone()
     return digest.hexdigest()
-
-
+# ------------------------------------------------------------------------------
 def run_from_command_line():
     parser = argparse.ArgumentParser(prog='bitrot')
     parser.add_argument(
-        '-l', '--follow-links', action='store_true',
+        '-f', '--follow-links', action='store_true',
         help='follow symbolic links and store target files\' hashes. Once '
              'a path is present in the database, it will be checked against '
              'changes in content even if it becomes a symbolic link. In '
@@ -286,7 +319,10 @@ def run_from_command_line():
         help='list new, updated and missing entries')
     parser.add_argument(
         '-t', '--test', action='store_true',
-        help='just test against an existing database, don\'t update anything')
+        help='just test against an existing database, don\'t update anything.')
+    parser.add_argument(
+        '-l', '--list', action='store_true',
+        help='List the contents of the database, ie what files we checked last.')
     parser.add_argument(
         '--version', action='version',
         version='%(prog)s {}.{}.{}'.format(*VERSION))
@@ -300,9 +336,9 @@ def run_from_command_line():
     args = parser.parse_args()
     if args.sum:
         try:
-            print(stable_sum())
+            lgr.info(stable_sum())
         except RuntimeError as e:
-            print(unicode(e).encode('utf8'), file=sys.stderr)
+            lgr.info(unicode(e).encode('utf8'))
     else:
         verbosity = 1
         if args.quiet:
@@ -315,8 +351,9 @@ def run_from_command_line():
             follow_links=args.follow_links,
             commit_interval=args.commit_interval,
             chunk_size=args.chunk_size,
+            list_dbase = args.list
         )
-
-
+# ------------------------------------------------------------------------------
 if __name__ == '__main__':
     run_from_command_line()
+# ------------------------------------------------------------------------------
