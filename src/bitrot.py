@@ -166,6 +166,7 @@ def run(verbosity=1, test=False, follow_links=False, commit_interval=300,
         print('Files in database:')
         for p in paths:
             print('  ' + str(p))
+        sys.exit(0)
 
     # go through the files and check
     for p in paths:
