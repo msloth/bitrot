@@ -195,8 +195,7 @@ def run(verbosity=1, test=False, follow_links=False, commit_interval=300,
         update_ts = datetime.datetime.utcnow().strftime(
             '%Y-%m-%d %H:%M:%S%z'
         )
-        cur.execute('SELECT mtime, hash, timestamp FROM bitrot WHERE '
-                    'path=?', (p_uni,))
+        cur.execute('SELECT mtime, hash, timestamp FROM bitrot WHERE path=?', (p_uni,))
         row = cur.fetchone()
         if not row:
             cur.execute('SELECT mtime, path, timestamp FROM bitrot WHERE '
@@ -237,6 +236,12 @@ def run(verbosity=1, test=False, follow_links=False, commit_interval=300,
                 ),
                 file=sys.stderr,
             )
+
+    # we need a newline for more clean output
+    if verbosity:
+            sys.stdout.write('\n')
+            sys.stdout.flush()
+    
     lgr.info('all files checked')
     for path in missing_paths:
         cur.execute('DELETE FROM bitrot WHERE path=?', (path,))
@@ -244,6 +249,8 @@ def run(verbosity=1, test=False, follow_links=False, commit_interval=300,
     conn.commit()
     cur.execute('SELECT COUNT(path) FROM bitrot')
     all_count = cur.fetchone()[0]
+
+    # report
     if verbosity:
         lgr.info('Finished. {:.2f} MiB of data read. {} errors found.'
               ''.format(total_size/1024/1024, error_count))
