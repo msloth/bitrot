@@ -110,18 +110,18 @@ def get_sqlite3_cursor(path, copy=False):
     atexit.register(conn.commit)
     return conn
 # ------------------------------------------------------------------------------
-def run(verbosity=1, test=False, follow_links=False, commit_interval=300,
+def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
         chunk_size=DEFAULT_CHUNK_SIZE, list_dbase = False):
     lgr = get_logger(verbosity)
-    lgr.info('Running tool')
+    lgr.info('**** Starting tool')
     current_dir = b'.'   # sic, relative path
 
     # get and open the database
     bitrot_db = os.path.join(current_dir, b'.bitrot.db')
     try:
-        conn = get_sqlite3_cursor(bitrot_db, copy=test)
+        conn = get_sqlite3_cursor(bitrot_db, copy=check)
     except ValueError:
-        lgr.info('No database exists so cannot test. Run the tool once first.')
+        lgr.info('No database exists so cannot check. Run the tool once first.')
         sys.exit(2)
     cur = conn.cursor()
 
@@ -286,8 +286,8 @@ def run(verbosity=1, test=False, follow_links=False, commit_interval=300,
                     lgr.info('  ', path)
             if not any((new_paths, updated_paths, missing_paths)):
                 lgr.info()
-        if test:
-            lgr.info('warning: database file not updated on disk (test mode).')
+        if check:
+            lgr.info('warning: database file not updated on disk (check mode).')
     if error_count:
         sys.exit(1)
 # ------------------------------------------------------------------------------
@@ -324,10 +324,10 @@ def run_from_command_line():
              'are used in calculation.')
     parser.add_argument(
         '-v', '--verbose', action='store_true',
-        help='list new, updated and missing entries')
+        help='more verbose output')
     parser.add_argument(
-        '-t', '--test', action='store_true',
-        help='just test against an existing database, don\'t update anything.')
+        '-c', '--check', action='store_true',
+        help='check files against the existing database. This will not update the database.')
     parser.add_argument(
         '-l', '--list', action='store_true',
         help='List the contents of the database, ie what files we checked last.')
@@ -355,7 +355,7 @@ def run_from_command_line():
             verbosity = 2
         run(
             verbosity=verbosity,
-            test=args.test,
+            check=args.check,
             follow_links=args.follow_links,
             commit_interval=args.commit_interval,
             chunk_size=args.chunk_size,
