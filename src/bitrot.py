@@ -173,8 +173,10 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
         st = os.stat(p)
         new_mtime = int(st.st_mtime)
         current_size += st.st_size
+
+        # progress report
         if verbosity:
-            size_fmt = '\r{:>6.1%}'.format(current_size/(total_size or 1))
+            size_fmt = '\rProgress: {:>6.1%}'.format(current_size/(total_size or 1))
             if size_fmt != last_reported_size:
                 sys.stdout.write(size_fmt)
                 sys.stdout.flush()
@@ -234,7 +236,6 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
                 ' Original info from {}.'.format(
                     p, stored_sha1, new_sha1, update_ts
                 ),
-                file=sys.stderr,
             )
 
     # we need a newline for more clean output
@@ -270,7 +271,7 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
                 for path in new_paths:
                     lgr.info('  ' + path)
             if updated_paths:
-                lgr.info('{} entries updated:'.format(len(updated_paths)))
+                lgr.info('{} entries has changed:'.format(len(updated_paths)))
                 updated_paths.sort()
                 for path in updated_paths:
                     lgr.info('  ' + path)
