@@ -128,6 +128,7 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
     cur = conn.cursor()
 
     # init variables
+    error_paths = []
     new_paths = []
     updated_paths = []
     renamed_paths = []
@@ -232,20 +233,17 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
                         (new_mtime, new_sha1, update_ts, p_uni))
             last_commit_time = tcommit(last_commit_time)
         elif stored_sha1 != new_sha1:
+            error_paths.append(p)
             error_count += 1
-            lgr.info(
-                '\rerror: SHA1 mismatch for {}: expected {}, got {}.'
-                ' Original info from {}.'.format(
-                    p, stored_sha1, new_sha1, update_ts
-                ),
-            )
 
-    # we need a newline for more clean output
     if verbosity:
+        # we need a newline for more clean output
         sys.stdout.write('\n')
         sys.stdout.flush()
-    
-    lgr.info('all files checked')
+        lgr.info('all files checked')
+        if len(error_paths) > 0:
+            lgr.info('**** errors detected ****')
+
     for path in missing_paths:
         cur.execute('DELETE FROM bitrot WHERE path=?', (path,))
         last_commit_time = tcommit(last_commit_time)
@@ -258,12 +256,17 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
         lgr.info('Finished. {:.2f} MiB of data read. {} errors found.'
               ''.format(total_size/1024/1024, error_count))
         lgr.info(
-            '{} entries in the database, {} new, {} updated, '
+            '{} entries in the database, {} paths with errors, {} new, {} updated, '
             '{} renamed, {} missing.'.format(
-                all_count, len(new_paths), len(updated_paths),
+                all_count, len(error_paths), len(new_paths), len(updated_paths),
                 len(renamed_paths), len(missing_paths),
             ),
         )
+        if error_paths:
+            lgr.info('{} entries with errors:'.format(len(error_paths)))
+            error_paths.sort()
+            for path in error_paths:
+                lgr.info('  ' + path)
         if new_paths:
             lgr.info('{} entries new:'.format(len(new_paths)))
             new_paths.sort()
