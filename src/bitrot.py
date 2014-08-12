@@ -45,6 +45,7 @@ DEFAULT_CHUNK_SIZE = 16384
 DOT_THRESHOLD = 200
 VERSION = (0, 6, 0)
 LOG_FILENAME = 'application.log'
+DATABASE_FILENAME = b'.bitrot.db'
 # ------------------------------------------------------------------------------
 def get_logger(verbosity = 1):
     logger = logging.getLogger(__name__)
@@ -117,7 +118,7 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
     current_dir = b'.'   # sic, relative path
 
     # get and open the database
-    bitrot_db = os.path.join(current_dir, b'.bitrot.db')
+    bitrot_db = os.path.join(current_dir, DATABASE_FILENAME)
     try:
         conn = get_sqlite3_cursor(bitrot_db, copy=check)
     except ValueError:
@@ -294,7 +295,7 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
 # ------------------------------------------------------------------------------
 def stable_sum():
     current_dir = b'.'   # sic, relative path
-    bitrot_db = os.path.join(current_dir, b'.bitrot.db')
+    bitrot_db = os.path.join(current_dir, DATABASE_FILENAME)
     digest = hashlib.sha512()
     conn = get_sqlite3_cursor(bitrot_db)
     cur = conn.cursor()
