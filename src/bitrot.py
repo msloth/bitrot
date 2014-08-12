@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+# ------------------------------------------------------------------------------
 # Copyright (C) 2013 by Łukasz Langa
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,7 +20,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-
+# ------------------------------------------------------------------------------
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -62,7 +62,7 @@ def get_logger(verbosity = 1):
     logger.addHandler(filehandler)
 
     if verbosity > 0:
-        # write logs also to stdout
+        # write logs also to stdout, ie if not running as 'quiet'
         stdouthandler = logging.StreamHandler(sys.stdout)
         stdouthandler.setLevel(logging.INFO)
         stdouthandler.setFormatter(formatter)
@@ -70,6 +70,7 @@ def get_logger(verbosity = 1):
 
     return logger
 # ------------------------------------------------------------------------------
+# get the SHA1 hash of a file
 def sha1(path, chunk_size):
     digest = hashlib.sha1()
     with open(path) as f:
