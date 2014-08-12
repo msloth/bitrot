@@ -242,8 +242,8 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
 
     # we need a newline for more clean output
     if verbosity:
-            sys.stdout.write('\n')
-            sys.stdout.flush()
+        sys.stdout.write('\n')
+        sys.stdout.flush()
     
     lgr.info('all files checked')
     for path in missing_paths:
@@ -288,6 +288,8 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
             lgr.info()
         if check:
             lgr.info('warning: database file not updated on disk (check mode).')
+
+    # if there are bitrot detected, we exit with error code
     if error_count:
         sys.exit(1)
 # ------------------------------------------------------------------------------
@@ -323,9 +325,6 @@ def run_from_command_line():
              'of hashes of all the entries in the database. No timestamps '
              'are used in calculation.')
     parser.add_argument(
-        '-v', '--verbose', action='store_true',
-        help='more verbose output')
-    parser.add_argument(
         '-c', '--check', action='store_true',
         help='check files against the existing database. This will not update the database.')
     parser.add_argument(
@@ -351,8 +350,6 @@ def run_from_command_line():
         verbosity = 1
         if args.quiet:
             verbosity = 0
-        elif args.verbose:
-            verbosity = 2
         run(
             verbosity=verbosity,
             check=args.check,
