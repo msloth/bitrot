@@ -346,9 +346,9 @@ def run_from_command_line():
     args = parser.parse_args()
     if args.sum:
         try:
-            lgr.info(stable_sum())
+            print(stable_sum())
         except RuntimeError as e:
-            lgr.info(unicode(e).encode('utf8'))
+            print(unicode(e).encode('utf8'))
     else:
         verbosity = 1
         if args.quiet:
