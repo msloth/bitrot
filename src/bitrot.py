@@ -257,38 +257,35 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
     if verbosity:
         lgr.info('Finished. {:.2f} MiB of data read. {} errors found.'
               ''.format(total_size/1024/1024, error_count))
-        if verbosity == 1:
-            lgr.info(
-                '{} entries in the database, {} new, {} updated, '
-                '{} renamed, {} missing.'.format(
-                    all_count, len(new_paths), len(updated_paths),
-                    len(renamed_paths), len(missing_paths),
-                ),
-            )
-        elif verbosity > 1:
-            lgr.info('{} entries in the database.'.format(all_count))
-            if new_paths:
-                lgr.info('{} entries new:'.format(len(new_paths)))
-                new_paths.sort()
-                for path in new_paths:
-                    lgr.info('  ' + path)
-            if updated_paths:
-                lgr.info('{} entries has changed:'.format(len(updated_paths)))
-                updated_paths.sort()
-                for path in updated_paths:
-                    lgr.info('  ' + path)
-            if renamed_paths:
-                lgr.info('{} entries renamed:'.format(len(renamed_paths)))
-                renamed_paths.sort()
-                for path in renamed_paths:
-                    lgr.info('  from', path[0], 'to', path[1])
-            if missing_paths:
-                lgr.info('{} entries missing:'.format(len(missing_paths)))
-                missing_paths = sorted(missing_paths)
-                for path in missing_paths:
-                    lgr.info('  ', path)
-            if not any((new_paths, updated_paths, missing_paths)):
-                lgr.info()
+        lgr.info(
+            '{} entries in the database, {} new, {} updated, '
+            '{} renamed, {} missing.'.format(
+                all_count, len(new_paths), len(updated_paths),
+                len(renamed_paths), len(missing_paths),
+            ),
+        )
+        if new_paths:
+            lgr.info('{} entries new:'.format(len(new_paths)))
+            new_paths.sort()
+            for path in new_paths:
+                lgr.info('  ' + path)
+        if updated_paths:
+            lgr.info('{} entries has changed:'.format(len(updated_paths)))
+            updated_paths.sort()
+            for path in updated_paths:
+                lgr.info('  ' + path)
+        if renamed_paths:
+            lgr.info('{} entries renamed:'.format(len(renamed_paths)))
+            renamed_paths.sort()
+            for path in renamed_paths:
+                lgr.info('  from', path[0], 'to', path[1])
+        if missing_paths:
+            lgr.info('{} entries missing:'.format(len(missing_paths)))
+            missing_paths = sorted(missing_paths)
+            for path in missing_paths:
+                lgr.info('  ' + path)
+        if not any((new_paths, updated_paths, missing_paths)):
+            lgr.info()
         if check:
             lgr.info('warning: database file not updated on disk (check mode).')
     if error_count:
