@@ -292,6 +292,8 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
     # if there are bitrot detected, we exit with error code
     if error_count:
         sys.exit(1)
+    else:
+        sys.exit(0)
 # ------------------------------------------------------------------------------
 def stable_sum():
     current_dir = b'.'   # sic, relative path
