@@ -21,6 +21,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 # ------------------------------------------------------------------------------
+# check files against bitrot
+# bitrot errors are here defined as a file having a SHA1 hash being different
+# from the last time we checked, while not being modified (through the meta-
+# data attribute mtime).
+# the tool exits with error codes:
+#   0 - no bitrot detected
+#   1 - bitrot(-s) detected
+#   2 - database error (does not exist)
+# ------------------------------------------------------------------------------
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -115,7 +124,7 @@ def get_sqlite3_cursor(path, copy=False):
 def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
         chunk_size=DEFAULT_CHUNK_SIZE, list_dbase = False):
     lgr = get_logger(verbosity)
-    lgr.info('**** Starting tool')
+    lgr.info('**** Starting tool ****')
     current_dir = b'.'   # sic, relative path
 
     # get and open the database
@@ -256,7 +265,7 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
         lgr.info('Finished. {:.2f} MiB of data read. {} errors found.'
               ''.format(total_size/1024/1024, error_count))
         lgr.info(
-            '{} entries in the database, {} paths with errors, {} new, {} updated, '
+            '{} entries in the database, {} errors, {} new, {} updated, '
             '{} renamed, {} missing.'.format(
                 all_count, len(error_paths), len(new_paths), len(updated_paths),
                 len(renamed_paths), len(missing_paths),
