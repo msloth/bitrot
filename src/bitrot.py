@@ -82,7 +82,7 @@ def get_logger(verbosity = 1):
 # get the SHA1 hash of a file
 def sha1(path, chunk_size):
     digest = hashlib.sha1()
-    with open(path) as f:
+    with open(path, 'r') as f:
         d = f.read(chunk_size)
         while d:
             digest.update(d)
