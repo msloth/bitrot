@@ -53,7 +53,7 @@ import logging
 DEFAULT_CHUNK_SIZE = 16384
 DOT_THRESHOLD = 200
 VERSION = (0, 6, 0)
-LOG_FILENAME = 'application.log'
+LOG_FILENAME = '.bitrot.log'
 DATABASE_FILENAME = b'.bitrot.db'
 # ------------------------------------------------------------------------------
 def get_logger(verbosity = 1):
