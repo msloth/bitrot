@@ -121,18 +121,18 @@ def get_sqlite3_cursor(path, copy=False):
     atexit.register(conn.commit)
     return conn
 # ------------------------------------------------------------------------------
-def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
+def run(verbosity=1, verify=False, follow_links=False, commit_interval=300,
         chunk_size=DEFAULT_CHUNK_SIZE, list_dbase = False):
     lgr = get_logger(verbosity)
-    lgr.info('**** Starting tool ****')
     current_dir = b'.'   # sic, relative path
+    lgr.info('**** Starting tool in: %s. ****' % (os.path.abspath(current_dir)))
 
     # get and open the database
     bitrot_db = os.path.join(current_dir, DATABASE_FILENAME)
     try:
-        conn = get_sqlite3_cursor(bitrot_db, copy=check)
+        conn = get_sqlite3_cursor(bitrot_db, copy=verify)
     except ValueError:
-        lgr.info('No database exists so cannot check. Run the tool once first.')
+        lgr.info('No database exists so cannot verify. Run the tool once first.')
         sys.exit(2)
     cur = conn.cursor()
 
@@ -180,7 +180,7 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
             print('  ' + str(p))
         sys.exit(0)
 
-    # go through the files and check
+    # go through the files and verify
     for p in paths:
         st = os.stat(p)
         new_mtime = int(st.st_mtime)
@@ -223,7 +223,6 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
                     cur.execute('UPDATE bitrot SET mtime=?, path=?, '
                                 'timestamp=? WHERE hash=?',
                                 (new_mtime, p_uni, update_ts, new_sha1))
-
                     last_commit_time = tcommit(last_commit_time)
                     break
             else:
@@ -249,7 +248,7 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
         # we need a newline for more clean output
         sys.stdout.write('\n')
         sys.stdout.flush()
-        lgr.info('all files checked')
+        lgr.info('all files verified')
         if len(error_paths) > 0:
             lgr.info('**** errors detected ****')
 
@@ -298,10 +297,11 @@ def run(verbosity=1, check=False, follow_links=False, commit_interval=300,
                 lgr.info('  ' + path)
         if not any((new_paths, updated_paths, missing_paths)):
             lgr.info()
-        if check:
-            lgr.info('warning: database file not updated on disk (check mode).')
 
-    # if there are bitrot detected, we exit with error code
+        if verify:
+            lgr.info('database file not updated on disk because running in verify mode.')
+
+    # if there is bitrot detected, we exit with error code
     if error_count:
         sys.exit(1)
     else:
@@ -339,11 +339,14 @@ def run_from_command_line():
              'of hashes of all the entries in the database. No timestamps '
              'are used in calculation.')
     parser.add_argument(
-        '-c', '--check', action='store_true',
-        help='check files against the existing database. This will not update the database.')
+        '-v', '--verify', action='store_true',
+        help='verify files against the existing database. This will not update the database.')
     parser.add_argument(
         '-l', '--list', action='store_true',
         help='List the contents of the database, ie what files we checked last.')
+    parser.add_argument(
+        '--clean', action='store_true',
+        help='Remove all the files (log, database) created by this application. Start over.')
     parser.add_argument(
         '--version', action='version',
         version='%(prog)s {}.{}.{}'.format(*VERSION))
@@ -360,13 +363,18 @@ def run_from_command_line():
             print(stable_sum())
         except RuntimeError as e:
             print(unicode(e).encode('utf8'))
+    elif args.clean:
+        if os.path.isfile(LOG_FILENAME):
+            os.remove(LOG_FILENAME)
+        if os.path.isfile(DATABASE_FILENAME):
+            os.remove(DATABASE_FILENAME)
     else:
         verbosity = 1
         if args.quiet:
             verbosity = 0
         run(
             verbosity=verbosity,
-            check=args.check,
+            verify=args.verify,
             follow_links=args.follow_links,
             commit_interval=args.commit_interval,
             chunk_size=args.chunk_size,
