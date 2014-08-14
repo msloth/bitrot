@@ -274,27 +274,32 @@ def run(verbosity=1, verify=False, follow_links=False, commit_interval=300,
             lgr.info('{} entries with errors:'.format(len(error_paths)))
             error_paths.sort()
             for path in error_paths:
-                lgr.info('  ' + path)
+                lgr.info('  ' + path.decode('utf8'))
+
         if new_paths:
             lgr.info('{} entries new:'.format(len(new_paths)))
             new_paths.sort()
             for path in new_paths:
-                lgr.info('  ' + path)
+                lgr.info('  ' + path.decode('utf8'))
+
         if updated_paths:
             lgr.info('{} entries has changed:'.format(len(updated_paths)))
             updated_paths.sort()
             for path in updated_paths:
-                lgr.info('  ' + path)
+                lgr.info('  ' + path.decode('utf8'))
+
         if renamed_paths:
             lgr.info('{} entries renamed:'.format(len(renamed_paths)))
             renamed_paths.sort()
             for path in renamed_paths:
-                lgr.info('  from', path[0], 'to', path[1])
+                lgr.info('  %s to %s'%(path[0], path[1]))
+
         if missing_paths:
             lgr.info('{} entries missing:'.format(len(missing_paths)))
             missing_paths = sorted(missing_paths)
             for path in missing_paths:
-                lgr.info('  ' + path)
+                lgr.info('  ' + path.decode('utf8'))
+
         if not any((new_paths, updated_paths, missing_paths)):
             lgr.info()
 
